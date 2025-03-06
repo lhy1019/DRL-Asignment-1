@@ -13,6 +13,7 @@ def get_action(obs):
     #       Otherwise, even if your agent performs well in training, it may fail during testing.
 
 
+
     return random.choice([0, 1, 2, 3, 4, 5]) # Choose a random action
     # You can submit this random agent to evaluate the performance of a purely random strategy.
 
