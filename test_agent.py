@@ -43,5 +43,5 @@ if __name__ == "__main__":
         "obstacle_prob": 0.0
     }
     
-    agent_score = run_agent("dqn_agent.py", env_config, render=True)
+    agent_score = run_agent("student_agent.py", env_config, render=True)
     print(f"Final Score: {agent_score}")
