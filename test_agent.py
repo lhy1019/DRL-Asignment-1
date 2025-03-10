@@ -3,7 +3,7 @@ from custom_env import TrainingTaxiEnv, EvaluationTaxiEnv
 import importlib.util
 import random
 
-def run_agent(agent_file, env_config, render=False, episodes=10):
+def run_agent(agent_file, env_config, render=False, episodes=100):
     # Dynamically load the student_agent module from the specified file
     spec = importlib.util.spec_from_file_location("student_agent", agent_file)
     student_agent = importlib.util.module_from_spec(spec)
@@ -15,6 +15,7 @@ def run_agent(agent_file, env_config, render=False, episodes=10):
 
     for episode in range(episodes):
         # Optionally vary the seed for each episode for more diverse testing
+        env = TrainingTaxiEnv(n=random.randint(5, 10), max_fuel=5000, obstacle_prob=random.uniform(0.0, 0.3))
         obs, _ = env.reset()
         done = False
         total_reward = 0
@@ -31,7 +32,7 @@ def run_agent(agent_file, env_config, render=False, episodes=10):
             step_count += 1
 
         total_rewards.append(total_reward)
-        print(f"Episode {episode + 1}: Steps = {step_count}, Reward = {total_reward}")
+        print(f"Episode {episode + 1}: Steps = {step_count}, Reward = {total_reward}, Done: {done}, Size: {env.n}")
 
     avg_reward = sum(total_rewards) / episodes
     print(f"Average Reward over {episodes} episodes: {avg_reward}")
@@ -44,5 +45,5 @@ if __name__ == "__main__":
         "obstacle_prob": random.uniform(0.0, 0.3)
     }
     
-    agent_score = run_agent("student_agent.py", env_config, render=False)
+    agent_score = run_agent("student_agent.py", env_config, render=True)
     print(f"Final Score: {agent_score}")

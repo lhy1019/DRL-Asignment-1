@@ -61,7 +61,7 @@ class TrainingTaxiEnv(gym.Env):
         self.reward_range = (-float('inf'), float('inf'))
 
 
-    def reset(self, seed=None, options=None):
+    def reset(self, seed=None, options=None, random_stations= False):
         super().reset(seed=seed)
         # reset random state
         if seed is not None:
@@ -69,7 +69,19 @@ class TrainingTaxiEnv(gym.Env):
             np.random.seed(seed)
 
         self.fuel = self.max_fuel
-        
+        # Randomly place stations
+        if random_stations:
+            self.stations = []
+            for _ in range(4):
+                self.stations.append((random.randint(0, self.n-1), random.randint(0, self.n-1))
+            )
+        else:
+            self.stations = []
+            self.stations.append((0,0))
+            self.stations.append((0, self.n-1))     
+            self.stations.append((self.n-1, 0))
+            self.stations.append((self.n-1, self.n-1))
+            
         # Randomly place obstacles
         self.obstacle_map = np.zeros((self.n, self.n), dtype=bool)
         for r in range(self.n):
@@ -78,16 +90,11 @@ class TrainingTaxiEnv(gym.Env):
                 # or do random
                 if random.random() < self.obstacle_prob:
                     self.obstacle_map[r, c] = True
+                    while (r, c) in self.stations:
+                        # ensure no obstacle on station
+                        r = random.randint(0, self.n-1)
+                        c = random.randint(0, self.n-1)
         
-        # Clear stations
-        self.stations = []
-        # For simplicity, let's place R/G/Y/B in the four corners:
-        # R top-left, G top-right, Y bottom-left, B bottom-right
-        # You can randomize these if you prefer, but let's just fix them
-        self.stations.append((0,0))          # R
-        self.stations.append((0, self.n-1))  # G
-        self.stations.append((self.n-1, 0))  # Y
-        self.stations.append((self.n-1, self.n-1))  # B
         
         # We will also ensure those corners are not obstacles:
         for (rr, cc) in self.stations:

@@ -50,17 +50,17 @@ class SimpleTaxiEnv(gym.Wrapper):
         obstacle_south = int(taxi_row == self.grid_size - 1)
         obstacle_east  = int(taxi_col == self.grid_size - 1)
         obstacle_west  = int(taxi_col == 0)
-        passenger_loc_north = int( (taxi_row - 1, taxi_col) in self.passenger_loc)
-        passenger_loc_south = int( (taxi_row + 1, taxi_col) in self.passenger_loc)
-        passenger_loc_east  = int( (taxi_row, taxi_col + 1) in self.passenger_loc)
-        passenger_loc_west  = int( (taxi_row, taxi_col - 1) in self.passenger_loc)
-        passenger_loc_middle  = int( (taxi_row, taxi_col) in self.passenger_loc)
+        passenger_loc_north = int( (taxi_row - 1, taxi_col) == self.passenger_loc)
+        passenger_loc_south = int( (taxi_row + 1, taxi_col) == self.passenger_loc)
+        passenger_loc_east  = int( (taxi_row, taxi_col + 1) == self.passenger_loc)
+        passenger_loc_west  = int( (taxi_row, taxi_col - 1) == self.passenger_loc)
+        passenger_loc_middle  = int( (taxi_row, taxi_col) == self.passenger_loc)
         passenger_look = passenger_loc_north or passenger_loc_south or passenger_loc_east or passenger_loc_west or passenger_loc_middle
-        destination_loc_north = int( (taxi_row - 1, taxi_col) in self.destination)
-        destination_loc_south = int( (taxi_row + 1, taxi_col) in self.destination)
-        destination_loc_east  = int( (taxi_row, taxi_col + 1) in self.destination)
-        destination_loc_west  = int( (taxi_row, taxi_col - 1) in self.destination)
-        destination_loc_middle  = int( (taxi_row, taxi_col) in self.destination)
+        destination_loc_north = int( (taxi_row - 1, taxi_col) == self.destination)
+        destination_loc_south = int( (taxi_row + 1, taxi_col) == self.destination)
+        destination_loc_east  = int( (taxi_row, taxi_col + 1) == self.destination)
+        destination_loc_west  = int( (taxi_row, taxi_col - 1) == self.destination)
+        destination_loc_middle  = int( (taxi_row, taxi_col) == self.destination)
         destination_look = destination_loc_north or destination_loc_south or destination_loc_east or destination_loc_west or destination_loc_middle
 
         
@@ -69,7 +69,6 @@ class SimpleTaxiEnv(gym.Wrapper):
     def step(self, action):
         """Perform an action and update the environment state."""
         taxi_row, taxi_col, pass_idx, dest_idx = self.env.unwrapped.decode(self.env.unwrapped.s)
-
         next_row, next_col = taxi_row, taxi_col
         if action == 0 :  # Move South
             next_row += 1
@@ -92,7 +91,7 @@ class SimpleTaxiEnv(gym.Wrapper):
 
         self.current_fuel -= 1  
         obs, reward, terminated, truncated, info = super().step(action)
-        # print(self.env.render())
+
         if reward == 20:  
             reward = 50
         elif reward == -1:  
@@ -187,10 +186,12 @@ def run_agent(agent_file, env_config, render=False):
                        action=None, step=step_count, fuel=env.current_fuel)
         time.sleep(0.5)
     while not done:
+        
+        print(env.render())
         action = student_agent.get_action(obs)
-        # action = int(input("Enter action: "))
+
         obs, reward, done, _, _ = env.step(action)
-        print('obs=',obs, 'reward=',reward, 'done=',done)
+        print('obs=',obs)
         total_reward += reward
         step_count += 1
 
@@ -208,5 +209,5 @@ if __name__ == "__main__":
         "fuel_limit": 5000
     }
     
-    agent_score = run_agent("student_agent.py", env_config, render=True)
+    agent_score = run_agent("keyboard_agent.py", env_config, render=True)
     print(f"Final Score: {agent_score}")
