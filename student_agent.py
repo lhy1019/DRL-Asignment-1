@@ -117,17 +117,19 @@ def get_action(obs):
     now_passenger_look = obs[-2]
     agent_internal_state["destination"] = state[2]
     agent_internal_state["visited"] = list(state[1])
+    prev_passenger_look = now_passenger_look
 
     # Action selection based on the Q-table.
     # If the current state was not encountered during training, choose a random action.
     if state not in Q_table:
         action = np.random.randint(0, 6)
+        # print('unseen')
     else:
         action = np.argmax(Q_table[state])
 
-    # print(f"State: {state}, Action: {action}")
+    # print(f"State: {state}, Internal state: {agent_internal_state}, Action: {action}")
         
     # Store the current action as the previous action for the next call.
     prev_action = action
 
-    return (0)
+    return action

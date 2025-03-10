@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict, deque
 import pickle
 from custom_env import TrainingTaxiEnv  # Your environment
+from simple_custom_taxi_env import SimpleTaxiEnv
 import random
 
 
@@ -50,12 +51,12 @@ def locate_destination(stations_offset):
     return distances.index(min(distances))
 
 def train_q_learning(
-    total_episodes=5000,
+    total_episodes=10000,
     alpha=0.1,
     gamma=0.99,
     epsilon=1.0,
     epsilon_decay=0.9995,
-    epsilon_min=0.01,
+    epsilon_min=0.3,
 ):
     """
     Train a tabular Q-learning agent on the TrainingTaxiEnv environment.
@@ -65,7 +66,7 @@ def train_q_learning(
     """
 
     # --- 1) Create Environment ---
-    env = TrainingTaxiEnv(n=5, max_fuel=50000, obstacle_prob=0.1)
+    env = TrainingTaxiEnv(n=5, max_fuel=5000, obstacle_prob=0.1)
     
     # The Q-table is a dictionary: Q[state] = np.array of action-values, shape = (num_actions,)
     Q = defaultdict(lambda: np.zeros(env.action_space.n, dtype=np.float32))
@@ -105,7 +106,6 @@ def train_q_learning(
                 action = env.action_space.sample()
             else:
                 action = np.argmax(Q[state])
-
             next_obs, reward, done, truncated, _ = env.step(action)
             next_state = get_state(next_obs, prev_pickup, prev_destination, prev_visited)
             now_passenger_look = next_state[-2]
@@ -123,7 +123,8 @@ def train_q_learning(
             if done and episode_steps < 200:
                 shape_reward += 50
                 reached_goal = True
-        
+            if action == 4 or action == 5:
+                shape_reward -= 5
             # reward -= 0.1
             reward += shape_reward
             # Q-learning update
@@ -138,7 +139,8 @@ def train_q_learning(
             episode_reward += reward
             episode_td_error_sum += abs(td_error)
             episode_steps += 1
-            
+            if done and (episode+1) % 100 == 0:
+                print(f'State: {state}, Action: {action}, Reward: {reward}, Next State: {next_state}')
 
             # Move on
             state = (next_state)
@@ -175,7 +177,6 @@ def train_q_learning(
                   f"Avg Steps: {np.mean(step_counts[-100:]):.1f} | " 
                   f"Max Steps: {np.max(step_counts[-100:])} | "
                   f"Min Steps: {np.min(step_counts[-100:])}") 
-            print(f"Final state: {state}")
             env.render()
             print()
 

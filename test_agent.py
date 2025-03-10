@@ -3,7 +3,7 @@ from custom_env import TrainingTaxiEnv, EvaluationTaxiEnv
 import importlib.util
 import random
 
-def run_agent(agent_file, env_config, render=False, episodes=1):
+def run_agent(agent_file, env_config, render=False, episodes=10):
     # Dynamically load the student_agent module from the specified file
     spec = importlib.util.spec_from_file_location("student_agent", agent_file)
     student_agent = importlib.util.module_from_spec(spec)
@@ -44,5 +44,5 @@ if __name__ == "__main__":
         "obstacle_prob": random.uniform(0.0, 0.3)
     }
     
-    agent_score = run_agent("student_agent.py", env_config, render=True)
+    agent_score = run_agent("student_agent.py", env_config, render=False)
     print(f"Final Score: {agent_score}")

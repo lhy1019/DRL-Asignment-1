@@ -92,7 +92,7 @@ class SimpleTaxiEnv(gym.Wrapper):
 
         self.current_fuel -= 1  
         obs, reward, terminated, truncated, info = super().step(action)
-        print(self.env.render())
+        # print(self.env.render())
         if reward == 20:  
             reward = 50
         elif reward == -1:  
