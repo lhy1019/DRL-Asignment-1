@@ -125,7 +125,7 @@ def get_action(obs):
     else:
         action = np.argmax(Q_table[state])
 
-    print(f"State: {state}, Action: {action}")
+    # print(f"State: {state}, Action: {action}")
         
     # Store the current action as the previous action for the next call.
     prev_action = action
