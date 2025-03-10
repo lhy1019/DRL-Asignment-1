@@ -21,7 +21,7 @@ def train_q_learning(
     gamma=0.99,
     epsilon=1.0,
     epsilon_decay=0.9995,
-    epsilon_min=0.1,
+    epsilon_min=1,
 ):
     """
     Train a tabular Q-learning agent on the TrainingTaxiEnv environment.
@@ -31,7 +31,7 @@ def train_q_learning(
     """
 
     # --- 1) Create Environment ---
-    env = TrainingTaxiEnv(n=5, max_fuel=5000, obstacle_prob=0.1)
+    env = TrainingTaxiEnv(n=5, max_fuel=200, obstacle_prob=0.2)
     
     # The Q-table is a dictionary: Q[state] = np.array of action-values, shape = (num_actions,)
     Q = defaultdict(lambda: np.zeros(env.action_space.n, dtype=np.float32))
@@ -50,10 +50,8 @@ def train_q_learning(
 
     # --- 3) Training Loop ---
     for episode in range(total_episodes):
-        env = TrainingTaxiEnv(n=random.randint(5, 10), max_fuel=100, obstacle_prob=random.uniform(0.0, 0.3))
-        obs, _ = env.reset(random_stations=True)    
+        obs, _ = env.reset()    
         state = get_state(obs)
-        visited = set()
 
         episode_reward = 0
         episode_steps = 0
@@ -69,9 +67,10 @@ def train_q_learning(
             next_state = get_state(next_obs)
             
             shape_reward = 0
-
-            if reward > -1 and action in [0, 1, 2, 3]:
+            
+            if (next_obs[0], next_obs[1]) != (obs[0], obs[1]):
                 shape_reward += 500
+
             reward += shape_reward
             # Q-learning update
             q_vals = Q[state]
@@ -89,6 +88,7 @@ def train_q_learning(
 
             # Move on
             state = (next_state)
+            obs = next_obs
             
                 
 

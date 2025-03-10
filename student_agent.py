@@ -70,5 +70,7 @@ def get_action(obs):
         print("Random action")
     else:
         action = np.argmax(Q_table[state])
+    
+    # print(f'State: {state}, Action: {action}')
         
     return action
