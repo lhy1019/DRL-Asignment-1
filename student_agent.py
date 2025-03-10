@@ -2,75 +2,79 @@ import numpy as np
 import pickle
 
 # Load the pre-trained Q-table
-with open("q_table.pkl", "rb") as f:
+with open("reinforce_policy.pkl", "rb") as f:
     Q_table = pickle.load(f)
 
+# Record important state information
+agent_information = {
+    "prev_0_direction": (0, 0),
+    "prev_1_direction": (0, 0),
+    "pickup": 0,
+    "stations": [],
+}
 
-# Agent internal state, maintained between steps within an episode.
-# agent_internal_state = {
-#     "visited": set()
-# }
+def reset_agent(obs):
+    agent_information['prev_0_direction'] = (0, 0)
+    agent_information["prev_1_direction"] = (0, 0)
+    agent_information['pickup'] = 0
+    agent_information["stations"] = [
+        (obs[2], obs[3]),
+        (obs[4], obs[5]),
+        (obs[6], obs[7]),
+        (obs[8], obs[9]),
+    ]
+    
 
-# prev_taxi_pos = None
-# stations_pos = []
+def softmax(x):
+    ex = np.exp(x - np.max(x))
+    return ex / np.sum(ex)
 
-# def reset_agent(obs):
-#     global prev_taxi_pos, stations_pos
-#     agent_internal_state['visited'] = set()
-#     prev_taxi_pos = None
-#     stations_pos = [(obs[2], obs[3]), (obs[4], obs[5]), (obs[6], obs[7]), (obs[8], obs[9])]
+directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+counter_directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
 
-
-def get_state(obs):
+def get_state(obs, prev_0_direction=(0, 0), prev_1_direction=(0, 0), pickup=0):
     taxi_row,   taxi_col, \
     Rrow, Rcol, Grow, Gcol, Yrow, Ycol, Brow, Bcol, \
     obstacle_north, obstacle_south, obstacle_east, obstacle_west, \
     passenger_look, destination_look = obs  
     
-    return (obstacle_north, obstacle_south, obstacle_east, obstacle_west)
+    dR = abs(taxi_row - Rrow) + abs(taxi_col - Rcol)
+    dG = abs(taxi_row - Grow) + abs(taxi_col - Gcol)
+    dY = abs(taxi_row - Yrow) + abs(taxi_col - Ycol)
+    dB = abs(taxi_row - Brow) + abs(taxi_col - Bcol)
+    on_passenger = 0
+    on_destination = 0
+    
+    if passenger_look and (min(dR, dG, dY, dB) == 0):
+        on_passenger = 1
+    if destination_look and (min(dR, dG, dY, dB) == 0):
+        on_destination = 1
+    return (pickup, obstacle_north, obstacle_south, obstacle_east, obstacle_west, passenger_look, on_passenger, destination_look, on_destination)
+    return (obstacle_north, obstacle_south, obstacle_east, obstacle_west, prev_0_direction, prev_1_direction, passenger_look, on_passenger)
 
 
 def get_action(obs):
-    """
-    Given an observation from the environment, returns an action (0-5) based on the pre-trained Q-table.
-    
-    This function implements the revised pickup logic:
-      - If the previous action was PICKUP (action 4) and in the previous observation the passenger was visible (passenger_look was 1)
-        but now the passenger is no longer visible (passenger_look is 0), then the agent registers a successful pickup.
-    
-    Additionally, it checks for a new episode by detecting a sudden jump in taxi position.
-    """
-    # global agent_internal_state, Q_table, prev_taxi_pos, stations_pos
+    global agent_information, Q_table
+    for i in range(4):
+        if (obs[2*i+2], obs[2*i+3]) not in agent_information["stations"]:
+            reset_agent(obs)
+            # print("Resetting agent")
+            break
+    # state = get_state(obs, agent_information["prev_0_direction"], agent_information["prev_1_direction"])
+    state = get_state(obs, pickup=agent_information["pickup"])
 
-    # # Extract current taxi position from the observation (first two elements).
-    # current_taxi_pos = (obs[0], obs[1])
-    # if prev_taxi_pos is not None:
-    #     # If the taxi's position jumped more than one cell (Manhattan distance > 1), assume a new episode.
-    #     if abs(current_taxi_pos[0] - prev_taxi_pos[0]) + abs(current_taxi_pos[1] - prev_taxi_pos[1]) > 1:
-    #         reset_agent(obs)
-            
-    # if (obs[2], obs[3]) not in stations_pos:
-    #     reset_agent(obs)
-    # if (obs[4], obs[5]) not in stations_pos:
-    #     reset_agent(obs)
-    # if (obs[6], obs[7]) not in stations_pos:
-    #     reset_agent(obs)
-    # if (obs[8], obs[9]) not in stations_pos:
-    #     reset_agent(obs)
- 
-    # prev_taxi_pos = current_taxi_pos
-
-    # Build the current state tuple from the observation and the internal state.
-    state = get_state(obs)
-
-    # Action selection based on the Q-table.
-    # If the current state was not encountered during training, choose a random action.
     if state not in Q_table:
         action = np.random.randint(0, 6)
-        print("Random action")
+        # print("Random action")
     else:
-        action = np.argmax(Q_table[state])
-    
-    # print(f'State: {state}, Action: {action}')
+        logits = Q_table[state]
+        probs = softmax(logits)
+        action = np.random.choice(np.arange(6), p=probs)
+        
+    if action < 4:
+        agent_information["prev_1_direction"] = agent_information["prev_0_direction"]
+        agent_information["prev_0_direction"] = directions[action]
+    if not agent_information["pickup"] and state[-3] and action == 4:
+        agent_information['pickup'] = 1
         
     return action
