@@ -130,4 +130,4 @@ def get_action(obs):
     # Store the current action as the previous action for the next call.
     prev_action = action
 
-    return action
+    return (0)
