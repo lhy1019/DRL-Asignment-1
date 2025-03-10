@@ -67,7 +67,7 @@ def train_q_learning(
 
     # --- 3) Training Loop ---
     for episode in range(total_episodes):
-        env = TrainingTaxiEnv(n=10, max_fuel=5000, obstacle_prob=0.1)
+        env = TrainingTaxiEnv(n=random.randint(5, 10), max_fuel=5000, obstacle_prob=random.uniform(0.0, 0.3))
         obs, _ = env.reset()    
         state = get_state(obs, pickup=False)
 
@@ -89,6 +89,9 @@ def train_q_learning(
         destination = None
 
         while not done:
+            if state not in Q:
+                Q[state] = np.zeros(env.action_space.n, dtype=np.float32)
+                
             # Epsilon-greedy action selection
             if np.random.rand() < epsilon:
                 action = env.action_space.sample()
@@ -101,7 +104,7 @@ def train_q_learning(
             shape_reward = 0
             if action == 4 and (next_state[-2] != prev_passenger_look) and not pickup:
                 pickup = True
-                shape_reward += 100
+                shape_reward += 20
                 
             if state[-1]:
                 destination = locate_destination(state[3:7])
@@ -110,19 +113,19 @@ def train_q_learning(
             if state[3] == (0, 0) and not R_bonus:
                 R_bonus = True
                 visited[0] = 1
-                shape_reward += 5
+                # shape_reward += 5
             if state[4] == (0, 0) and not G_bonus:
                 G_bonus = True
                 visited[1] = 1
-                shape_reward += 5
+                # shape_reward += 5
             if state[5] == (0, 0) and not Y_bonus:
                 Y_bonus = True
                 visited[2] = 1
-                shape_reward += 5
+                # shape_reward += 5
             if state[6] == (0, 0) and not B_bonus:
                 B_bonus = True
                 visited[3] = 1
-                shape_reward += 5
+                # shape_reward += 5
                 
             if done and episode_steps < 200:
                 shape_reward += 50

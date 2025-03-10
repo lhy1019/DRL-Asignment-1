@@ -1,6 +1,7 @@
 import time
 from custom_env import TrainingTaxiEnv, EvaluationTaxiEnv
 import importlib.util
+import random
 
 def run_agent(agent_file, env_config, render=False, episodes=1):
     # Dynamically load the student_agent module from the specified file
@@ -38,9 +39,9 @@ def run_agent(agent_file, env_config, render=False, episodes=1):
 
 if __name__ == "__main__":
     env_config = {
-        "n": 5,
+        "n": random.randint(5, 10),
         "max_fuel": 5000,
-        "obstacle_prob": 0.0
+        "obstacle_prob": random.uniform(0.0, 0.3)
     }
     
     agent_score = run_agent("student_agent.py", env_config, render=True)
