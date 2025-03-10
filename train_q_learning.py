@@ -12,7 +12,7 @@ stations = {
     2: 'Y',
     3: 'B'
 }
-def get_state(obs, pickup=False, visited=[0,0,0,0], destination = None):
+def get_state(obs, pickup=False, destination=None, visited=[0, 0, 0, 0]):
     taxi_row,   taxi_col, \
     Rrow, Rcol, Grow, Gcol, Yrow, Ycol, Brow, Bcol, \
     obstacle_north, obstacle_south, obstacle_east, obstacle_west, \
@@ -22,18 +22,35 @@ def get_state(obs, pickup=False, visited=[0,0,0,0], destination = None):
     drG, dcG = Grow - taxi_row, Gcol - taxi_col
     drY, dcY = Yrow - taxi_row, Ycol - taxi_col
     drB, dcB = Brow - taxi_row, Bcol - taxi_col
-
+    
     pickup = pickup
-    visited = tuple(visited)
     destination = destination
-    return (pickup, visited, destination, (drR, dcR), (drG, dcG), (drY, dcY), (drB, dcB), (obstacle_north, obstacle_south, obstacle_east, obstacle_west), passenger_look, destination_look)
+    visited = np.array(visited)
+    
+    if destination_look:
+        destination = locate_destination([(drR, dcR), (drG, dcG), (drY, dcY), (drB, dcB)])
+        destination = stations[destination]
+        
+    if (drR, dcR) == (0, 0):
+        visited[0] = 1
+        
+    if (drG, dcG) == (0, 0):
+        visited[1] = 1
+
+    if (drY, dcY) == (0, 0):
+        visited[2] = 1
+
+    if (drB, dcB) == (0, 0):
+        visited[3] = 1
+
+    return (pickup, tuple(visited), destination, (drR, dcR), (drG, dcG), (drY, dcY), (drB, dcB), (obstacle_north, obstacle_south, obstacle_east, obstacle_west), passenger_look, destination_look)
 
 def locate_destination(stations_offset):
     distances = [abs(dr) + abs(dc) for dr, dc in stations_offset]
     return distances.index(min(distances))
 
 def train_q_learning(
-    total_episodes=50000,
+    total_episodes=5000,
     alpha=0.1,
     gamma=0.99,
     epsilon=1.0,
@@ -69,29 +86,20 @@ def train_q_learning(
     for episode in range(total_episodes):
         env = TrainingTaxiEnv(n=random.randint(5, 10), max_fuel=5000, obstacle_prob=random.uniform(0.0, 0.3))
         obs, _ = env.reset()    
-        state = get_state(obs, pickup=False)
+        state = get_state(obs, pickup=False, destination=None, visited=[0, 0, 0, 0])
 
         done = False
         prev_passenger_look = state[-2]
-        pickup = state[0]
+        prev_pickup = state[0]
+        prev_visited = state[1]
+        prev_destination = state[2]
         
         episode_reward = 0.0
         episode_td_error_sum = 0.0
         episode_steps = 0
         reached_goal = False
-        
-        visited = [0, 0, 0, 0]
-        R_bonus = False
-        G_bonus = False
-        Y_bonus = False
-        B_bonus = False
-        
-        destination = None
 
         while not done:
-            if state not in Q:
-                Q[state] = np.zeros(env.action_space.n, dtype=np.float32)
-                
             # Epsilon-greedy action selection
             if np.random.rand() < epsilon:
                 action = env.action_space.sample()
@@ -99,33 +107,18 @@ def train_q_learning(
                 action = np.argmax(Q[state])
 
             next_obs, reward, done, truncated, _ = env.step(action)
-            next_state = get_state(next_obs, pickup=pickup, visited=visited, destination=destination)
+            next_state = get_state(next_obs, prev_pickup, prev_destination, prev_visited)
+            now_passenger_look = next_state[-2]
             
+            now_pickup = next_state[0]
+            now_visited = next_state[1]
+            now_destination = next_state[2]
             shape_reward = 0
-            if action == 4 and (next_state[-2] != prev_passenger_look) and not pickup:
-                pickup = True
+            
+            if action == 4 and (now_passenger_look != prev_passenger_look) and not prev_pickup:
+                now_pickup = True
                 shape_reward += 20
                 
-            if state[-1]:
-                destination = locate_destination(state[3:7])
-                destination = stations[destination]
-                
-            if state[3] == (0, 0) and not R_bonus:
-                R_bonus = True
-                visited[0] = 1
-                # shape_reward += 5
-            if state[4] == (0, 0) and not G_bonus:
-                G_bonus = True
-                visited[1] = 1
-                # shape_reward += 5
-            if state[5] == (0, 0) and not Y_bonus:
-                Y_bonus = True
-                visited[2] = 1
-                # shape_reward += 5
-            if state[6] == (0, 0) and not B_bonus:
-                B_bonus = True
-                visited[3] = 1
-                # shape_reward += 5
                 
             if done and episode_steps < 200:
                 shape_reward += 50
@@ -150,6 +143,9 @@ def train_q_learning(
             # Move on
             state = (next_state)
             prev_passenger_look = state[-2]
+            prev_pickup = now_pickup
+            prev_visited = now_visited
+            prev_destination = now_destination
             
                 
 
@@ -164,7 +160,7 @@ def train_q_learning(
         epsilons.append(epsilon)
         td_errors_per_episode.append(episode_td_error_sum / max(1, episode_steps))
         goal_successes.append(int(reached_goal))
-        pickup_successes.append(int(pickup))
+        pickup_successes.append(int(now_pickup))
         step_counts.append(episode_steps)
         
 

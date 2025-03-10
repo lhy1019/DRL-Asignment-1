@@ -23,7 +23,7 @@ def run_agent(agent_file, env_config, render=False, episodes=1):
         while not done:
             if render:
                 env.render()
-                time.sleep(0.3)
+                time.sleep(0.5)
             # Use the dynamically loaded agent's get_action function
             action = student_agent.get_action(obs)
             obs, reward, done, _, _ = env.step(action)

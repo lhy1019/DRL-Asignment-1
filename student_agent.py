@@ -47,42 +47,40 @@ def locate_destination(stations_offset):
     distances = [abs(dr) + abs(dc) for dr, dc in stations_offset]
     return distances.index(min(distances))
 
-def get_state(obs):
-    """
-    Convert the raw observation into a state tuple.
-    
-    The observation format is:
-      (taxi_row, taxi_col, Rrow, Rcol, Grow, Gcol, Yrow, Ycol, Brow, Bcol,
-       obstacle_north, obstacle_south, obstacle_east, obstacle_west, passenger_look, destination_look)
-    
-    The state tuple is defined as:
-      (pickup, visited, destination,
-       (drR, dcR), (drG, dcG), (drY, dcY), (drB, dcB),
-       (obstacle_north, obstacle_south, obstacle_east, obstacle_west),
-       passenger_look, destination_look)
-       
-    where:
-      - pickup: whether the passenger has been picked up
-      - visited: a tuple marking whether each station (R, G, Y, B) has been visited (1) or not (0)
-      - destination: the target station letter (e.g. 'R') or None if not set yet
-      - (drX, dcX): differences between taxi position and station X position
-    """
-    taxi_row, taxi_col, Rrow, Rcol, Grow, Gcol, Yrow, Ycol, Brow, Bcol, \
-    obstacle_north, obstacle_south, obstacle_east, obstacle_west, passenger_look, destination_look = obs
+def get_state(obs, pickup=False, destination=None, visited=[0, 0, 0, 0]):
+    taxi_row,   taxi_col, \
+    Rrow, Rcol, Grow, Gcol, Yrow, Ycol, Brow, Bcol, \
+    obstacle_north, obstacle_south, obstacle_east, obstacle_west, \
+    passenger_look, destination_look = obs  
     
     drR, dcR = Rrow - taxi_row, Rcol - taxi_col
     drG, dcG = Grow - taxi_row, Gcol - taxi_col
     drY, dcY = Yrow - taxi_row, Ycol - taxi_col
     drB, dcB = Brow - taxi_row, Bcol - taxi_col
     
-    pickup = agent_internal_state["pickup"]
-    visited = tuple(agent_internal_state["visited"])
-    destination = agent_internal_state["destination"]
+    pickup = pickup
+    destination = destination
+    visited = list(visited)
     
-    return (pickup, visited, destination,
-            (drR, dcR), (drG, dcG), (drY, dcY), (drB, dcB),
-            (obstacle_north, obstacle_south, obstacle_east, obstacle_west),
-            passenger_look, destination_look)
+    if destination_look:
+        destination = locate_destination([(drR, dcR), (drG, dcG), (drY, dcY), (drB, dcB)])
+        destination = stations[destination]
+        agent_internal_state["destination"] = destination
+        
+    if (drR, dcR) == (0, 0):
+        visited[0] = 1
+        
+    if (drG, dcG) == (0, 0):
+        visited[1] = 1
+
+    if (drY, dcY) == (0, 0):
+        visited[2] = 1
+
+    if (drB, dcB) == (0, 0):
+        visited[3] = 1
+    agent_internal_state["visited"] = visited
+    return (pickup, tuple(visited), destination, (drR, dcR), (drG, dcG), (drY, dcY), (drB, dcB), (obstacle_north, obstacle_south, obstacle_east, obstacle_west), passenger_look, destination_look)
+
 
 def get_action(obs):
     """
@@ -105,36 +103,20 @@ def get_action(obs):
     prev_taxi_pos = current_taxi_pos
 
     # Extract current passenger look from the observation (index -2, or obs[14]).
-    current_passenger_look = obs[14]
+    now_passenger_look = obs[-2]
 
     # Check pickup success:
     # If the previous action was PICKUP (4), and in the previous observation the passenger was visible,
     # but now the passenger is no longer visible, then set the pickup flag.
     if prev_action == 4 and prev_passenger_look is not None:
-        if prev_passenger_look == 1 and current_passenger_look == 0:
+        if prev_passenger_look == 1 and now_passenger_look == 0:
             agent_internal_state["pickup"] = True
 
-    # Update the previous passenger look for the next step.
-    prev_passenger_look = current_passenger_look
-
     # Build the current state tuple from the observation and the internal state.
-    state = get_state(obs)
-    
-    # Update destination if not yet set and destination_look is active.
-    if agent_internal_state["destination"] is None and state[-1] == 1:
-        stations_offset = state[3:7]  # Offsets for stations R, G, Y, B.
-        dest_index = locate_destination(stations_offset)
-        agent_internal_state["destination"] = stations[dest_index]
-    
-    # Mark a station as visited if taxi is at that station (offset equals (0, 0)).
-    if state[3] == (0, 0) and agent_internal_state["visited"][0] == 0:
-        agent_internal_state["visited"][0] = 1
-    if state[4] == (0, 0) and agent_internal_state["visited"][1] == 0:
-        agent_internal_state["visited"][1] = 1
-    if state[5] == (0, 0) and agent_internal_state["visited"][2] == 0:
-        agent_internal_state["visited"][2] = 1
-    if state[6] == (0, 0) and agent_internal_state["visited"][3] == 0:
-        agent_internal_state["visited"][3] = 1
+    state = get_state(obs, pickup=agent_internal_state["pickup"], destination=agent_internal_state["destination"], visited=agent_internal_state["visited"])
+    now_passenger_look = obs[-2]
+    agent_internal_state["destination"] = state[2]
+    agent_internal_state["visited"] = list(state[1])
 
     # Action selection based on the Q-table.
     # If the current state was not encountered during training, choose a random action.
@@ -143,7 +125,7 @@ def get_action(obs):
     else:
         action = np.argmax(Q_table[state])
 
-    # print(f"State: {state}, Action: {action}")
+    print(f"State: {state}, Action: {action}")
         
     # Store the current action as the previous action for the next call.
     prev_action = action
