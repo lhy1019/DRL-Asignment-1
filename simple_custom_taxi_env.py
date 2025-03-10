@@ -92,7 +92,7 @@ class SimpleTaxiEnv(gym.Wrapper):
 
         self.current_fuel -= 1  
         obs, reward, terminated, truncated, info = super().step(action)
-
+        print(self.env.render())
         if reward == 20:  
             reward = 50
         elif reward == -1:  
@@ -187,12 +187,10 @@ def run_agent(agent_file, env_config, render=False):
                        action=None, step=step_count, fuel=env.current_fuel)
         time.sleep(0.5)
     while not done:
-        
-        
         action = student_agent.get_action(obs)
-
+        # action = int(input("Enter action: "))
         obs, reward, done, _, _ = env.step(action)
-        print('obs=',obs)
+        print('obs=',obs, 'reward=',reward, 'done=',done)
         total_reward += reward
         step_count += 1
 
