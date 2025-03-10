@@ -5,81 +5,29 @@ import pickle
 with open("q_table.pkl", "rb") as f:
     Q_table = pickle.load(f)
 
-# Mapping station indices to letters
-stations = {
-    0: 'R',
-    1: 'G',
-    2: 'Y',
-    3: 'B'
-}
 
 # Agent internal state, maintained between steps within an episode.
 agent_internal_state = {
-    "pickup": False,
-    "visited": [0, 0, 0, 0],  # Order: R, G, Y, B
-    "destination": None
+    "visited": set()
 }
 
-# Global variables to help detect episode resets and track previous pickup observation.
 prev_taxi_pos = None
-prev_passenger_look = None
-prev_action = None
+stations_pos = []
 
-def reset_agent():
-    """Reset the agent's internal state and helper variables.
-    Call this function when a new episode begins.
-    """
-    global agent_internal_state, prev_taxi_pos, prev_passenger_look, prev_action
-    agent_internal_state = {
-        "pickup": False,
-        "visited": [0, 0, 0, 0],
-        "destination": None
-    }
+def reset_agent(obs):
+    global prev_taxi_pos, stations_pos
+    agent_internal_state['visited'] = set()
     prev_taxi_pos = None
-    prev_passenger_look = None
-    prev_action = None
+    stations_pos = [(obs[2], obs[3]), (obs[4], obs[5]), (obs[6], obs[7]), (obs[8], obs[9])]
 
-def locate_destination(stations_offset):
-    """
-    Given a tuple of (row, col) differences for stations R, G, Y, B,
-    return the index of the station with the smallest Manhattan distance.
-    """
-    distances = [abs(dr) + abs(dc) for dr, dc in stations_offset]
-    return distances.index(min(distances))
 
-def get_state(obs, pickup=False, destination=None, visited=[0, 0, 0, 0]):
+def get_state(obs):
     taxi_row,   taxi_col, \
     Rrow, Rcol, Grow, Gcol, Yrow, Ycol, Brow, Bcol, \
     obstacle_north, obstacle_south, obstacle_east, obstacle_west, \
     passenger_look, destination_look = obs  
     
-    drR, dcR = Rrow - taxi_row, Rcol - taxi_col
-    drG, dcG = Grow - taxi_row, Gcol - taxi_col
-    drY, dcY = Yrow - taxi_row, Ycol - taxi_col
-    drB, dcB = Brow - taxi_row, Bcol - taxi_col
-    
-    pickup = pickup
-    destination = destination
-    visited = list(visited)
-    
-    if destination_look:
-        destination = locate_destination([(drR, dcR), (drG, dcG), (drY, dcY), (drB, dcB)])
-        destination = stations[destination]
-        agent_internal_state["destination"] = destination
-        
-    if (drR, dcR) == (0, 0):
-        visited[0] = 1
-        
-    if (drG, dcG) == (0, 0):
-        visited[1] = 1
-
-    if (drY, dcY) == (0, 0):
-        visited[2] = 1
-
-    if (drB, dcB) == (0, 0):
-        visited[3] = 1
-    agent_internal_state["visited"] = visited
-    return (pickup, tuple(visited), destination, (drR, dcR), (drG, dcG), (drY, dcY), (drB, dcB), (obstacle_north, obstacle_south, obstacle_east, obstacle_west), passenger_look, destination_look)
+    return (taxi_row, taxi_col, obstacle_north, obstacle_south, obstacle_east, obstacle_west)
 
 
 def get_action(obs):
@@ -92,44 +40,34 @@ def get_action(obs):
     
     Additionally, it checks for a new episode by detecting a sudden jump in taxi position.
     """
-    global agent_internal_state, Q_table, prev_taxi_pos, prev_passenger_look, prev_action
+    global agent_internal_state, Q_table, prev_taxi_pos, stations_pos
 
     # Extract current taxi position from the observation (first two elements).
     current_taxi_pos = (obs[0], obs[1])
     if prev_taxi_pos is not None:
         # If the taxi's position jumped more than one cell (Manhattan distance > 1), assume a new episode.
         if abs(current_taxi_pos[0] - prev_taxi_pos[0]) + abs(current_taxi_pos[1] - prev_taxi_pos[1]) > 1:
-            reset_agent()
+            reset_agent(obs)
+            
+    if (obs[2], obs[3]) not in stations_pos:
+        reset_agent(obs)
+    if (obs[4], obs[5]) not in stations_pos:
+        reset_agent(obs)
+    if (obs[6], obs[7]) not in stations_pos:
+        reset_agent(obs)
+    if (obs[8], obs[9]) not in stations_pos:
+        reset_agent(obs)
+ 
     prev_taxi_pos = current_taxi_pos
 
-    # Extract current passenger look from the observation (index -2, or obs[14]).
-    now_passenger_look = obs[-2]
-
-    # Check pickup success:
-    # If the previous action was PICKUP (4), and in the previous observation the passenger was visible,
-    # but now the passenger is no longer visible, then set the pickup flag.
-    if prev_action == 4 and prev_passenger_look is not None:
-        if prev_passenger_look == 1 and now_passenger_look == 0:
-            agent_internal_state["pickup"] = True
-
     # Build the current state tuple from the observation and the internal state.
-    state = get_state(obs, pickup=agent_internal_state["pickup"], destination=agent_internal_state["destination"], visited=agent_internal_state["visited"])
-    now_passenger_look = obs[-2]
-    agent_internal_state["destination"] = state[2]
-    agent_internal_state["visited"] = list(state[1])
-    prev_passenger_look = now_passenger_look
+    state = get_state(obs)
 
     # Action selection based on the Q-table.
     # If the current state was not encountered during training, choose a random action.
     if state not in Q_table:
         action = np.random.randint(0, 6)
-        # print('unseen')
     else:
         action = np.argmax(Q_table[state])
-
-    # print(f"State: {state}, Internal state: {agent_internal_state}, Action: {action}")
         
-    # Store the current action as the previous action for the next call.
-    prev_action = action
-
     return action
