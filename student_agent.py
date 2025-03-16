@@ -93,12 +93,19 @@ def get_state(obs, visited=0, pickup=False, passenger_pos = None):
         dP = abs(taxi_row - passenger_pos[0]) + abs(taxi_col - passenger_pos[1])
         if dP == 0:
             passenger_dir = 4
+        else:
+            passenger_offset = (passenger_pos[0] - taxi_row, passenger_pos[1] - taxi_col)
+            try:
+                passenger_dir = directions.index(passenger_offset)
+            except:
+                passenger_dir = 5
         
           
     return (pickup, visited,
             obstacle_north, obstacle_south, obstacle_east, obstacle_west, 
             passenger_look, passenger_dir, 
             destination_look, destination_dir)
+
 
 def get_action(obs, render=False):
     global agent_information, Q_table
@@ -137,12 +144,17 @@ def get_action(obs, render=False):
         fourth_best_action = sorted_actions[-4]
         # With probability epsilon_second_best, pick second best action
         action = best_action
+        # if action in [0, 1, 2, 3]:
+        #     next_pos = (obs[0] + directions[action][0], obs[1] + directions[action][1])
+        #     if next_pos in agent_information["visited"]:
+        #         if np.random.uniform(0, 1) < 0.2:
+        #             action = second_best_action
         prev_action = agent_information["prev_direction"]
         if prev_action and directions_counter.index(prev_action) == best_action:
-            if np.random.uniform(0, 1) < 0.8:
+            if np.random.uniform(0, 1) < 0.5:
                 action = second_best_action
-        if np.random.uniform(0, 1) < 0.1:
-            action = np.random.choice([best_action, second_best_action, third_best_action, fourth_best_action])
+        if np.random.uniform(0, 1) < 0.2:
+            action = np.random.choice([best_action, second_best_action, third_best_action])
         if render:
             print(f"Action: {action}, State: {state}")
             print()
