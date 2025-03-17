@@ -180,6 +180,8 @@ def get_action(obs, render=False):
             print()
     d_target = abs(state[2][0]) + abs(state[2][1])
     if d_target == 0:
+        if state[-1] != 4:
+            agent_information['unvisited'].remove(agent_information['target'])
         agent_information['target'] = np.random.choice(list(agent_information['unvisited']))
     passenger_dir = state[-3]
     if not agent_information["pickup"] and passenger_dir == 4 and action == 4:
