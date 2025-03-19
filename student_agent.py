@@ -17,7 +17,9 @@ agent_information = {
     "prev_taxi_pos": None,
     "prev_direction": None,
     "target": None,
-    "unvisited": set()
+    "unvisited": set(),
+    "destination": None,
+    
 }
 
 def reset_agent(obs):
@@ -114,11 +116,19 @@ def get_state(obs, visited=0, pickup=False, passenger_pos = None, target=None):
             d_offset = (Yrow - taxi_row, Ycol - taxi_col)
         elif target == 3:
             d_offset = (Brow - taxi_row, Bcol - taxi_col)
-    
+    if d_offset[0] > 0:
+        d_offset = (1, d_offset[1])
+    elif d_offset[0] < 0:
+        d_offset = (-1, d_offset[1])
+    if d_offset[1] > 0:
+        d_offset = (d_offset[0], 1)
+    elif d_offset[1] < 0:
+        d_offset = (d_offset[0], -1)
+        
         
           
     return (pickup,
-            target, d_offset,
+            d_offset,
             obstacle_north, obstacle_south, obstacle_east, obstacle_west, 
             passenger_look, passenger_dir, 
             destination_look, destination_dir)
@@ -144,6 +154,7 @@ def get_action(obs, render=False):
         
     if agent_information['pickup']:
         agent_information['passenger_pos'] = (obs[0], obs[1])
+        # agent_information['target'] = agent_information["destination"]
 
     state = get_state(obs, pickup=agent_information["pickup"], 
                         visited=agent_information["visit_count"],
@@ -152,33 +163,29 @@ def get_action(obs, render=False):
                       )
 
     if state not in Q_table:
-        action = np.random.randint(0, 6)
+        action = np.random.randint(0, 4)
 
     else:
         qvals = Q_table[state]
+        action = np.argmax(qvals)
         sorted_actions = qvals.argsort()  # ascending order
         best_action = sorted_actions[-1]
         second_best_action = sorted_actions[-2]
         third_best_action = sorted_actions[-3]
-        fourth_best_action = sorted_actions[-4]
         # With probability epsilon_second_best, pick second best action
-        action = best_action
-        # # if action in [0, 1, 2, 3]:
-        # #     next_pos = (obs[0] + directions[action][0], obs[1] + directions[action][1])
-        # #     if next_pos in agent_information["visited"]:
-        # #         if np.random.uniform(0, 1) < 0.2:
-        # #             action = second_best_action
+        # action = best_action
         # prev_action = agent_information["prev_direction"]
-        # # if prev_action and directions_counter.index(prev_action) == best_action:
-        # #     if np.random.uniform(0, 1) < 0.5:
-        # #         action = second_best_action
-        if action not in [4, 5]:
-            if np.random.uniform(0, 1) < 0.2:
-                action = np.random.choice([best_action, second_best_action])
+        # if prev_action and directions_counter.index(prev_action) == best_action:
+        #     if np.random.uniform(0, 1) < 0.5:
+        #         action = second_best_action
+                
+        if best_action not in [4, 5] and second_best_action not in [4, 5]:
+            if np.random.uniform(0, 1) < 0.3:
+                action = second_best_action
         if render:
             print(f"Action: {action}, State: {state}")
             print()
-    d_target = abs(state[2][0]) + abs(state[2][1])
+    d_target = abs(state[1][0]) + abs(state[1][1])
     if d_target == 0:
         if state[-1] != 4:
             agent_information['unvisited'].remove(agent_information['target'])
