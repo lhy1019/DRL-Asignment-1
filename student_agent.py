@@ -116,15 +116,15 @@ def get_state(obs, visited=0, pickup=False, passenger_pos = None, target=None):
             d_offset = (Yrow - taxi_row, Ycol - taxi_col)
         elif target == 3:
             d_offset = (Brow - taxi_row, Bcol - taxi_col)
+
     if d_offset[0] > 0:
-        d_offset = (1, d_offset[1])
+        d_offset = (np.ceil(d_offset[0]/2), d_offset[1])
     elif d_offset[0] < 0:
-        d_offset = (-1, d_offset[1])
+        d_offset = (np.floor(d_offset[0]/2), d_offset[1])
     if d_offset[1] > 0:
-        d_offset = (d_offset[0], 1)
-    elif d_offset[1] < 0:
-        d_offset = (d_offset[0], -1)
-        
+        d_offset = (d_offset[0], np.ceil(d_offset[1]/2))
+    elif d_offset[1] < 0:    
+        d_offset = (d_offset[0], np.floor(d_offset[1]/2))  
         
           
     return (pickup,
@@ -180,7 +180,7 @@ def get_action(obs, render=False):
         #         action = second_best_action
                 
         if best_action not in [4, 5] and second_best_action not in [4, 5]:
-            if np.random.uniform(0, 1) < 0.3:
+            if np.random.uniform(0, 1) < 0.2:
                 action = second_best_action
         if render:
             print(f"Action: {action}, State: {state}")
