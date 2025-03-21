@@ -34,7 +34,7 @@ def reset_agent(obs):
     visited = set()
     visited.add((obs[0], obs[1]))
     agent_information["visited"] = visited
-    agent_information["visit_count"] = 1
+    agent_information["steps"] = 0
     agent_information["passenger_pos"] = None
     agent_information["prev_taxi_pos"] = (obs[0], obs[1])
     agent_information["prev_direction"] = None
@@ -130,8 +130,7 @@ def get_state(obs, visited=0, pickup=False, passenger_pos = None, target=None):
     return (pickup,
             d_offset,
             obstacle_north, obstacle_south, obstacle_east, obstacle_west, 
-            passenger_look, passenger_dir, 
-            destination_look, destination_dir)
+            passenger_dir, destination_dir)
 
 
 
@@ -182,15 +181,24 @@ def get_action(obs, render=False):
         if best_action not in [4, 5] and second_best_action not in [4, 5]:
             if np.random.uniform(0, 1) < 0.2:
                 action = second_best_action
+        if np.random.uniform(0, 1) < 0.2:
+            action = np.random.choice([0, 1, 2, 3])
         if render:
             print(f"Action: {action}, State: {state}")
             print()
+    agent_information["steps"] += 1
     d_target = abs(state[1][0]) + abs(state[1][1])
     if d_target == 0:
-        if state[-1] != 4:
-            agent_information['unvisited'].remove(agent_information['target'])
+        # if state[-1] != 4:
+            # agent_information['unvisited'].remove(agent_information['target'])
         agent_information['target'] = np.random.choice(list(agent_information['unvisited']))
-    passenger_dir = state[-3]
+        agent_information['steps'] = 0
+        
+    if agent_information['steps'] > 20:
+        agent_information['target'] = np.random.choice(list(agent_information['unvisited']))
+        agent_information['steps'] = 0
+        
+    passenger_dir = state[-2]
     if not agent_information["pickup"] and passenger_dir == 4 and action == 4:
         agent_information["pickup"] = 1
         agent_information["passenger_pos"] = (obs[0], obs[1])
