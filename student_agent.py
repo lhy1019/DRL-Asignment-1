@@ -181,8 +181,8 @@ def get_action(obs, render=False):
         if best_action not in [4, 5] and second_best_action not in [4, 5]:
             if np.random.uniform(0, 1) < 0.2:
                 action = second_best_action
-        if np.random.uniform(0, 1) < 0.2:
-            action = np.random.choice([0, 1, 2, 3])
+        # if np.random.uniform(0, 1) < 0.2:
+        #     action = np.random.choice([0, 1, 2, 3])
         if render:
             print(f"Action: {action}, State: {state}")
             print()
