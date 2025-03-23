@@ -118,13 +118,13 @@ def get_state(obs, visited=0, pickup=False, passenger_pos = None, target=None):
             d_offset = (Brow - taxi_row, Bcol - taxi_col)
 
     if d_offset[0] > 0:
-        d_offset = (np.ceil(d_offset[0]/2), d_offset[1])
+        d_offset = (int(np.ceil(d_offset[0]/2)), d_offset[1])
     elif d_offset[0] < 0:
-        d_offset = (np.floor(d_offset[0]/2), d_offset[1])
+        d_offset = (int(np.floor(d_offset[0]/2)), d_offset[1])
     if d_offset[1] > 0:
-        d_offset = (d_offset[0], np.ceil(d_offset[1]/2))
+        d_offset = (d_offset[0], int(np.ceil(d_offset[1]/2)))
     elif d_offset[1] < 0:    
-        d_offset = (d_offset[0], np.floor(d_offset[1]/2))  
+        d_offset = (d_offset[0], int(np.floor(d_offset[1]/2)))   
         
           
     return (pickup,
